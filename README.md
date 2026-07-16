@@ -5,10 +5,6 @@ incêndios florestais em uma malha bidimensional. O projeto implementa o modelo
 sem controle e o modelo com controle dos bombeiros, ambos discretizados pelo
 Método de Euler explícito e usando vizinhança de Von Neumann.
 
-O programa foi organizado para apresentação no SIA da Universidade Federal de
-Viçosa (UFV), com foco em clareza matemática, desempenho, reprodutibilidade e
-qualidade de engenharia de software.
-
 ## Funcionalidades
 
 - Modelo sem controle.
