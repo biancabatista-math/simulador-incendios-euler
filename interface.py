@@ -9,6 +9,7 @@ from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 import numpy as np
+from PIL import Image
 
 from configuracoes import PADRAO, ParametrosSimulacao, TipoModelo
 from modelos import ModeloComControle, ModeloSemControle
@@ -252,7 +253,7 @@ class AplicacaoIncendio(ctk.CTk):
 
         ctk.CTkLabel(
             self.barra_lateral,
-            text="SIA • Universidade Federal de Viçosa",
+            text="Universidade Federal de Viçosa",
             text_color=("gray45", "gray65"),
         ).pack(pady=20)
 
@@ -305,8 +306,8 @@ class AplicacaoIncendio(ctk.CTk):
         rodape = ctk.CTkLabel(
             self.area_principal,
             text=(
-                "Verde: baixa intensidade • Amarelo: intensidade moderada • "
-                "Laranja/vermelho: alta intensidade"
+                "Verde: baixa intensidade • Amarelo: moderada • "
+                "Laranja/vermelho: alta"
             ),
             anchor="w",
             text_color=("gray35", "gray70"),
@@ -509,7 +510,8 @@ class AplicacaoIncendio(ctk.CTk):
         messagebox.showinfo(
             "Edição manual",
             "Antes de iniciar a simulação, clique em qualquer célula do mapa "
-            "e informe uma intensidade entre 0 e 1. Os índices começam em 0.",
+            "e informe uma intensidade entre 0 e 1. Os índices começam em 0. "
+            "Ao passar o mouse sobre uma célula, o valor atual é exibido.",
         )
 
     def _editar_celula(self, linha: int, coluna: int) -> None:
@@ -770,20 +772,31 @@ class AplicacaoIncendio(ctk.CTk):
         caminho = filedialog.asksaveasfilename(
             title="Salvar imagem da simulação",
             defaultextension=".png",
+            initialfile="simulacao_incendio.png",
             filetypes=[
-                ("PNG", "*.png"),
-                ("PDF", "*.pdf"),
-                ("SVG", "*.svg"),
+                ("Imagem PNG", "*.png"),
+                ("Imagem JPEG", "*.jpg *.jpeg"),
+                ("Documento PDF", "*.pdf"),
+                ("Imagem vetorial SVG", "*.svg"),
             ],
         )
         if not caminho:
             return
+
+        caminho_path = Path(caminho)
+        if not caminho_path.suffix:
+            caminho_path = caminho_path.with_suffix(".png")
+
         try:
-            self.painel.salvar_imagem(caminho)
-        except OSError as erro:
+            arquivo_criado = self.painel.salvar_imagem(caminho_path)
+        except (OSError, ValueError) as erro:
             messagebox.showerror("Falha ao salvar", str(erro))
             return
-        messagebox.showinfo("Imagem salva", f"Arquivo criado:\n{caminho}")
+
+        messagebox.showinfo(
+            "Imagem salva",
+            f"Arquivo criado em:\n{arquivo_criado}",
+        )
 
     def _exportar_resultados(self) -> None:
         if self.parametros is None:
@@ -833,22 +846,37 @@ class AplicacaoIncendio(ctk.CTk):
         )
 
     def _registrar_frame(self) -> None:
+        iteracao = self._iteracao_atual()
+
         if self.comparacao is not None:
             frame = self.painel.comparacao_para_imagem(
                 self.comparacao.sem_controle.matriz_atual,
                 self.comparacao.com_controle.matriz_atual,
+                iteracao=iteracao,
             )
         elif self.motor is not None:
             frame = self.painel.matriz_para_imagem(
-                self.motor.matriz_atual
+                self.motor.matriz_atual,
+                titulo=self.motor.modelo.nome,
+                iteracao=iteracao,
             )
         elif self.matriz_inicial is not None:
             frame = self.painel.matriz_para_imagem(
-                self.matriz_inicial
+                self.matriz_inicial,
+                titulo="Condição inicial",
+                iteracao=0,
             )
         else:
             return
-        self.frames_gif.append(frame)
+
+        # A paleta reduz significativamente o consumo de memória sem perder
+        # a legibilidade necessária para a animação em GIF.
+        frame_gif = frame.convert(
+            "P",
+            palette=Image.Palette.ADAPTIVE,
+            colors=256,
+        )
+        self.frames_gif.append(frame_gif)
 
     def _exportar_gif(self) -> None:
         if not self.frames_gif:
@@ -880,6 +908,7 @@ class AplicacaoIncendio(ctk.CTk):
                 duration=max(20, duracao),
                 loop=0,
                 optimize=False,
+                disposal=2,
             )
         except OSError as erro:
             messagebox.showerror("Falha ao exportar GIF", str(erro))

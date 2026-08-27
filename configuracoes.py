@@ -28,7 +28,7 @@ class ConfiguracoesPadrao:
     intensidade_inicial: float = 0.80
     quantidade_focos: int = 1
     limiar_queima: float = 0.01
-    limite_frames_gif: int = 250
+    limite_frames_gif: int = 120
 
 
 PADRAO = ConfiguracoesPadrao()
